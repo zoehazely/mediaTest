@@ -44,14 +44,15 @@ start() {
       -Dconf.dir=@SIPX_CONFDIR@ \
       -Dvar.dir=@SIPX_VARDIR@ \
       $JavaSslOpts \
+      ${SIPXIVR_OPTS} \
       org.sipfoundry.sipxivr.SipXivr \
       $Args"
     if [ -n $NoFork ]; then
+      runuser -s /bin/bash @SIPXPBXUSER@ -c "${Command}"
+    else
       runuser -s /bin/bash @SIPXPBXUSER@ -c "${Command}" >/dev/null 2>&1 &
       echo $! > ${pidfile}
       echo_success
-    else
-      runuser -s /bin/bash @SIPXPBXUSER@ -c "${Command}"
     fi
 }
 
