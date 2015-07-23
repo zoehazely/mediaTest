@@ -18,7 +18,6 @@ Source: %name-%version.tar.gz
 
 Obsoletes: sipxvxml
 
-Requires: sipxcommserverlib >= %version
 Requires: sipxcommons >= %version
 Requires: sipxprompts >= %version
 Requires: chkconfig
