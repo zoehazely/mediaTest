@@ -8,7 +8,8 @@
 sipx_core = \
 	sipXprompts \
 	sipXivr \
-	sipXrecording
+	sipXrecording \
+	sipXacccode
 
 
 sipx_all =   $(sipx_core)
