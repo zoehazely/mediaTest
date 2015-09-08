@@ -17,27 +17,42 @@
 package org.sipfoundry.voicemail.mailbox;
 
 public enum Folder {
-    INBOX {
-        public String toString() {
-            return "inbox";
-        }
-    },
+    INBOX("inbox"),
+    SAVED("saved"),
+    DELETED("deleted"),
+    CONFERENCE("conference");
+	
+	private final String id;
+	
+	private Folder(final String id) {
+		this.id = id;
+	}
+	
+	public String getId() {
+		return id;
+	}
 
-    SAVED {
-        public String toString() {
-            return "saved";
-        }
-    },
-
-    DELETED {
-        public String toString() {
-            return "deleted";
-        }
-    },
-
-    CONFERENCE {
-        public String toString() {
-            return "conference";
-        }
-    }
+	@Override
+	public String toString() {
+		return id;
+	}
+	
+	public static Folder lookUp(String name) {
+		Folder folder = tryLookUp(name);
+		if(folder != null) {
+			return folder;
+		}
+		
+		throw new IllegalArgumentException("Invalid Folder Name");
+	}
+	
+	public static Folder tryLookUp(String name) {
+		for(Folder folder : values()) {
+			if(folder.id.equalsIgnoreCase(name)) {
+				return folder;
+			}
+		}
+		
+		return null;
+	}
 }

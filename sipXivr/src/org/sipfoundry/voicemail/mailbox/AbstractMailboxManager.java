@@ -28,7 +28,6 @@ import javax.sound.sampled.AudioSystem;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.sipfoundry.commons.userdb.User;
 import org.sipfoundry.sipxivr.email.Emailer;
@@ -62,6 +61,8 @@ public abstract class AbstractMailboxManager implements MailboxManager {
 
     protected abstract VmMessage forwardMessage(VmMessage originalMessage, TempMessage comments,
             MessageDescriptor descriptor, User destUser, String newMessageId);
+    
+    protected abstract String nextMessageId();
 
     @Override
     public final TempMessage createTempMessage(String username, String fromUri, boolean audio) {
@@ -101,7 +102,7 @@ public abstract class AbstractMailboxManager implements MailboxManager {
         }
 
         if (!message.isStored()) {
-            String messageId = nextMessageId(m_mailstoreDirectory + "/..");
+            String messageId = nextMessageId();
             VmMessage savedMessage = saveTempMessageInStorage(
                     destUser,
                     message,
@@ -119,7 +120,7 @@ public abstract class AbstractMailboxManager implements MailboxManager {
 
     @Override
     public final void copyMessage(User destUser, TempMessage message) {
-        String newMessageId = nextMessageId(m_mailstoreDirectory + "/..");
+        String newMessageId = nextMessageId();
         VmMessage savedMessage = copyMessage(newMessageId, destUser, message);
         if (savedMessage != null) {
             // the method applies only to voicemails - so the folder where the message is saved is
@@ -131,7 +132,7 @@ public abstract class AbstractMailboxManager implements MailboxManager {
 
     @Override
     public void forwardMessage(User destUser, VmMessage message, TempMessage comments) {
-        String newMessageId = nextMessageId(m_mailstoreDirectory + "/..");
+        String newMessageId = nextMessageId();
         MessageDescriptor descriptor = createMessageDescriptor(destUser.getUserName(), comments, newMessageId,
                 destUser.getIdentity());
         long totalDuration = descriptor.getDurationSecsLong() + message.getDescriptor().getDurationSecsLong();
@@ -246,66 +247,6 @@ public abstract class AbstractMailboxManager implements MailboxManager {
     private MessageDescriptor createMessageDescriptor(String destUser, TempMessage message, String messageId,
             String identity) {
         return createMessageDescriptor(destUser, message, messageId, VOICEMAIL_SUBJECT, identity);
-    }
-
-    /**
-     * Generate the next message Id static synchronized as it's machine wide
-     * 
-     * @param directory which holds the messageid.txt file
-     */
-    private synchronized String nextMessageId(String directory) {
-        File midFile = new File(directory, "messageid.txt");
-        String messageIdFilePath = midFile.getPath();
-        long numericMessageId;
-        String messageId;
-        if (!midFile.exists()) {
-            numericMessageId = 1;
-            String format = m_identity + "%08d";
-            messageId = String.format(format, numericMessageId);
-            numericMessageId++;
-            try {
-                FileUtils.writeStringToFile(midFile, String.format(format, numericMessageId));
-            } catch (IOException e) {
-                LOG.error("Message::nextMessageId cannot write " + messageIdFilePath, e);
-                throw new RuntimeException(e);
-            }
-            return messageId;
-        }
-
-        try {
-            // The messageid in the file is the NEXT one
-            messageId = FileUtils.readFileToString(midFile);
-            numericMessageId = Long.parseLong(StringUtils.deleteWhitespace(messageId));
-        } catch (IOException e) {
-            LOG.error("Message::nextMessageId cannot read " + messageIdFilePath, e);
-            throw new RuntimeException(e);
-        }
-        // Increment message id, store for another day
-        numericMessageId++;
-        try {
-            FileUtils.writeStringToFile(midFile, String.valueOf(numericMessageId));
-        } catch (IOException e) {
-            LOG.error("Message::nextMessageId cannot write " + messageIdFilePath, e);
-            throw new RuntimeException(e);
-        }
-
-        return messageId;
-    }
-
-    protected Folder getFolderFromName(String name) {
-        if (Folder.INBOX.toString().equals(name)) {
-            return Folder.INBOX;
-        }
-        if (Folder.SAVED.toString().equals(name)) {
-            return Folder.SAVED;
-        }
-        if (Folder.DELETED.toString().equals(name)) {
-            return Folder.DELETED;
-        }
-        if (Folder.CONFERENCE.toString().equals(name)) {
-            return Folder.CONFERENCE;
-        }
-        return null;
     }
 
     protected String getGreetingTypeName(GreetingType type) {
@@ -434,6 +375,10 @@ public abstract class AbstractMailboxManager implements MailboxManager {
 
     public void setIvrIdentity(String identity) {
         m_identity = identity;
+    }
+    
+    public String getIvrIdentity() {
+    	return m_identity;
     }
 
     public void setAudioFormat(String format) {

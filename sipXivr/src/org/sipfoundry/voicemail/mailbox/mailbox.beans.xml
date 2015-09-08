@@ -2,6 +2,7 @@
 <beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd">
 
+  <!-- Uncomment this to revert back mailbox to FileSystem instead of gridFS
   <bean id="mailboxManager" class="org.sipfoundry.voicemail.mailbox.FilesystemMailboxManager" init-method="init">
     <property name="mailstoreDirectory" value="${ivr.mailstoreDirectory}" />
     <property name="promptsDirectory" value="${ivr.promptsDirectory}" />
@@ -15,9 +16,43 @@
     <property name="mwiManager" ref="mwiManager" />
     <property name="audioFormat" value="${audio.format}" />
   </bean>
-
+  
   <bean id="messageDescriptorWriter" class="org.sipfoundry.voicemail.mailbox.MessageDescriptorWriter" />
-
   <bean id="messageDescriptorReader" class="org.sipfoundry.voicemail.mailbox.MessageDescriptorReader" />
-
+  -->
+  
+  
+  <bean id="mailboxManager" class="org.sipfoundry.voicemail.mailbox.GridFSMailboxManager" init-method="init">
+    <property name="mailstoreDirectory" value="${ivr.mailstoreDirectory}" />
+    <property name="promptsDirectory" value="${ivr.promptsDirectory}" />
+    <property name="operatorAddr" value="${ivr.operatorAddr}" />
+    <property name="configUrl" value="${ivr.configUrl}" />
+    <property name="ivrIdentity" value="${ivr.identity}" />
+    <property name="secret" value="${SHARED_SECRET}" />
+    <property name="emailer" ref="emailer" />
+    <property name="mwiManager" ref="mwiManager" />
+    <property name="audioFormat" value="${audio.format}" />
+    <property name="gridFSVmTemplate" ref="gridFSVmTemplate" />
+    <property name="messageIdSequenceCounter" ref="gridFSSequenceCounter" />
+  </bean>
+  
+  <bean id="gridFSVmTemplate" class="org.sipfoundry.voicemail.mailbox.gridfs.GridFSVmTemplate">
+  	<constructor-arg ref="mongoDBDelegateFactory"/>
+  </bean>
+  
+  <bean id="gridFSSequenceCounter" class="org.sipfoundry.voicemail.mailbox.gridfs.GridFSSequenceCounter">
+  	<constructor-arg ref="sequenceDB"/>
+  	<constructor-arg value="${ivr.identity}"/>
+  </bean>
+  
+  <bean id="sequenceDB" class="org.sipfoundry.commons.mongo.MongoSpringTemplate">
+    <constructor-arg ref="mongoDbFactory"/>
+    <property name="dbname" value="vmdb"/> 
+  </bean>
+  
+  <bean id="mongoDBDelegateFactory" class="org.sipfoundry.commons.mongo.MongoDelegateFactory">
+    <constructor-arg ref="mongoDbFactory"/>
+    <constructor-arg value="vmdb"/> 
+  </bean>
+  
 </beans>

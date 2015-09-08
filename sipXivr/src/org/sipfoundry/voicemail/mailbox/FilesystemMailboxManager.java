@@ -176,6 +176,11 @@ public class FilesystemMailboxManager extends AbstractMailboxManager {
         }
 
     }
+    
+    @Override
+    protected String nextMessageId() {
+    	return nextMessageId(m_mailstoreDirectory + "/..");
+    }
 
     @Override
     public VmMessage getVmMessage(String username, Folder folder, String messageId, boolean loadAudio) {
@@ -598,9 +603,9 @@ public class FilesystemMailboxManager extends AbstractMailboxManager {
     @Override
     public void moveMessageToFolder(User user, String messageId, String destination) {
         FilenameFilter filter = new FileFilterByMessageId(messageId);
-        File destinationFile = getFolder(user.getUserName(), getFolderFromName(destination));
         File[] files = findFilesInUserDirectory(user.getUserName(), filter);
         try {
+        	File destinationFile = getFolder(user.getUserName(), Folder.lookUp(destination));
             for (File file : files) {
                 FileUtils.moveFileToDirectory(file, destinationFile, true);
             }
@@ -658,6 +663,50 @@ public class FilesystemMailboxManager extends AbstractMailboxManager {
             messageList.add(StringUtils.removeEnd(file.getName(), MESSAGE_IDENTIFIER));
         }
         return messageList;
+    }
+    
+    /**
+     * Generate the next message Id static synchronized as it's machine wide
+     * 
+     * @param directory which holds the messageid.txt file
+     */
+    private synchronized String nextMessageId(String directory) {
+        File midFile = new File(directory, "messageid.txt");
+        String messageIdFilePath = midFile.getPath();
+        long numericMessageId;
+        String messageId;
+        if (!midFile.exists()) {
+            numericMessageId = 1;
+            String format = getIvrIdentity() + "%08d";
+            messageId = String.format(format, numericMessageId);
+            numericMessageId++;
+            try {
+                FileUtils.writeStringToFile(midFile, String.format(format, numericMessageId));
+            } catch (IOException e) {
+                LOG.error("Message::nextMessageId cannot write " + messageIdFilePath, e);
+                throw new RuntimeException(e);
+            }
+            return messageId;
+        }
+
+        try {
+            // The messageid in the file is the NEXT one
+            messageId = FileUtils.readFileToString(midFile);
+            numericMessageId = Long.parseLong(StringUtils.deleteWhitespace(messageId));
+        } catch (IOException e) {
+            LOG.error("Message::nextMessageId cannot read " + messageIdFilePath, e);
+            throw new RuntimeException(e);
+        }
+        // Increment message id, store for another day
+        numericMessageId++;
+        try {
+            FileUtils.writeStringToFile(midFile, String.valueOf(numericMessageId));
+        } catch (IOException e) {
+            LOG.error("Message::nextMessageId cannot write " + messageIdFilePath, e);
+            throw new RuntimeException(e);
+        }
+
+        return messageId;
     }
 
     private static class FileFilterByMessageId implements FilenameFilter {
